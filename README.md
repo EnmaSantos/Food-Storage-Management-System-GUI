@@ -56,3 +56,5 @@ For a detailed technical breakdown of the project's architecture, features, and 
 ## My Learning Journey
 
 This project was a comprehensive exercise in migrating a fully functional console application to a modern, event-driven GUI application using Windows Forms. It strengthened my skills in Object-Oriented Programming, robust file handling for data persistence, and designing an intuitive, user-friendly interface. A key challenge and learning experience was refactoring the original console-based logic into decoupled services (Validation_Service.cs) that could be reused effectively within the GUI's event-based architecture. Implementing features like the security check and the ClickOnce installer provided valuable insight into building secure, distributable, real-world applications.
+
+# Testing pull request
