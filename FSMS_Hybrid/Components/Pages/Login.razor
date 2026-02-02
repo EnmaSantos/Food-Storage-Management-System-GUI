@@ -1,0 +1,162 @@
+@page "/login"
+@inject Services.SupabaseService Supabase
+@inject NavigationManager Navigation
+
+<div class="flex min-h-screen items-center justify-center bg-gray-100">
+    <div class="w-full max-w-md space-y-8 rounded-xl bg-white p-10 shadow-lg">
+        <div class="text-center">
+            <h2 class="mt-6 text-3xl font-extrabold text-gray-900">
+                Sign in to your account
+            </h2>
+            <p class="mt-2 text-sm text-gray-600">
+                Or <a href="#" class="font-medium text-primary hover:text-blue-500">start your 14-day free trial</a>
+            </p>
+        </div>
+
+        @if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <div class="rounded-md bg-red-50 p-4">
+                <div class="flex">
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Error</h3>
+                        <div class="mt-2 text-sm text-red-700">@ErrorMessage</div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="mt-8 space-y-6">
+            <div class="rounded-md shadow-sm">
+                <div>
+                    <label for="email-address" class="sr-only">Email address</label>
+                    <input @bind="Email" id="email-address" name="email" type="email" autocomplete="email" required
+                           class="relative block w-full appearance-none rounded-none rounded-t-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
+                           placeholder="Email address">
+                </div>
+                <div>
+                    <label for="password" class="sr-only">Password</label>
+                    <input @bind="Password" id="password" name="password" type="password" autocomplete="current-password" required
+                           class="relative block w-full appearance-none rounded-none rounded-b-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
+                           placeholder="Password">
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <input id="remember-me" name="remember-me" type="checkbox"
+                           class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                    <label for="remember-me" class="ml-2 block text-sm text-gray-900">Remember me</label>
+                </div>
+
+                <div class="text-sm">
+                    <a href="#" class="font-medium text-primary hover:text-blue-500">
+                        Forgot your password?
+                    </a>
+                </div>
+            </div>
+
+            <div>
+                <button @onclick="HandleLogin" disabled="@IsLoading"
+                        class="group relative flex w-full justify-center rounded-md border border-transparent bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:bg-gray-400">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3">
+                        <!-- Lock Icon -->
+                        <svg class="h-5 w-5 text-blue-300 group-hover:text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
+                        </svg>
+                    </span>
+                    @if (IsLoading) { <span class="ml-2">Signing in...</span> } else { <span>Sign in</span> }
+                </button>
+            </div>
+            
+             <div>
+                <button @onclick="HandleSignUp" disabled="@IsLoading"
+                        class="group relative flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:bg-gray-100">
+                    Sign Up
+                </button>
+            </div>
+            
+            <div class="relative">
+                <div class="absolute inset-0 flex items-center">
+                    <div class="w-full border-t border-gray-300"></div>
+                </div>
+                <div class="relative flex justify-center text-sm">
+                    <span class="bg-white px-2 text-gray-500">Or continue with</span>
+                </div>
+            </div>
+            
+            <div>
+                 <button @onclick="HandleGoogleLogin"
+                        class="flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
+                    <svg class="h-5 w-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                         <path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"/>
+                    </svg>
+                    Sign in with Google
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string Email = "";
+    private string Password = "";
+    private string ErrorMessage = "";
+    private bool IsLoading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Ensure Supabase is initialized
+        await Supabase.InitializeAsync();
+    }
+
+    private async Task HandleLogin()
+    {
+        IsLoading = true;
+        ErrorMessage = "";
+        
+        var result = await Supabase.LoginAsync(Email, Password);
+        if (result.Success)
+        {
+            Navigation.NavigateTo("/");
+        }
+        else
+        {
+            ErrorMessage = result.Message;
+        }
+        
+        IsLoading = false;
+    }
+
+    private async Task HandleSignUp()
+    {
+        IsLoading = true;
+        ErrorMessage = "";
+        
+        var result = await Supabase.SignUpAsync(Email, Password);
+        if (result.Success)
+        {
+             ErrorMessage = "Account created! Check email to confirm.";
+             // Optional: Navigate or show success message
+        }
+        else
+        {
+            ErrorMessage = result.Message;
+        }
+        
+        IsLoading = false;
+    }
+    
+    private async Task HandleGoogleLogin()
+    {
+        // Supabase Google Auth (Provider)
+        // This usually involves a redirect flow.
+        try 
+        {
+            await Supabase.Client.Auth.SignIn(Supabase.Gotrue.Constants.Provider.Google);
+        }
+        catch(Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+    }
+}

@@ -14,7 +14,12 @@ public static class MauiProgram
 				fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
 			});
 
+
 		builder.Services.AddMauiBlazorWebView();
+
+		// Register Supabase Service
+		builder.Services.AddSingleton<Services.SupabaseService>();
+
 
 #if DEBUG
 		builder.Services.AddBlazorWebViewDeveloperTools();
