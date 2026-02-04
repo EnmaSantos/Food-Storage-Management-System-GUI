@@ -1,5 +1,313 @@
 ﻿@page "/"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject Services.SupabaseService DbService
 
-<h1>Hello, world!</h1>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Inventory Management</h1>
+    <button class="btn btn-primary shadow-sm" @onclick="PrepareAddFoodItem">
+        <i class="bi bi-plus-lg me-1"></i> Add Item
+    </button>
+</div>
 
-Welcome to your new app.
+<!-- Quick Stats Row -->
+@if (InventoryItems != null)
+{
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-0 shadow-sm border-start border-4 border-primary h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Items</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">@InventoryItems.Count</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-box-seam h2 text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+         <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-0 shadow-sm border-start border-4 border-danger h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Low Stock / Expired</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">@InventoryItems.Count(i => i.IsExpired || i.ItemQuantity < 1)</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-exclamation-circle h2 text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header py-3 bg-white border-0 d-flex justify-content-between align-items-center">
+        <h6 class="m-0 font-weight-bold text-primary">Your Food Items</h6>
+        <div class="input-group" style="max-width: 300px;">
+             <span class="input-group-text bg-light border-0"><i class="bi bi-search"></i></span>
+            <input type="text" class="form-control bg-light border-0 small" placeholder="Search for items..." @bind="SearchTerm" @bind:event="oninput">
+        </div>
+    </div>
+    <div class="card-body p-0">
+        @if (IsLoading)
+        {
+            <div class="text-center p-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-muted">Loading your inventory...</p>
+            </div>
+        }
+        else if (InventoryItems == null || !InventoryItems.Any())
+        {
+            <div class="text-center p-5">
+                <div class="mb-3">
+                    <i class="bi bi-basket display-1 text-muted opacity-25"></i>
+                </div>
+                <h5>Your pantry is empty!</h5>
+                <p class="text-muted">Start by adding some food items to track them here.</p>
+                <button class="btn btn-outline-primary mt-2" @onclick="PrepareAddFoodItem">Add First Item</button>
+            </div>
+        }
+        else
+        {
+             <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light text-muted small text-uppercase">
+                        <tr>
+                            <th scope="col" class="ps-4">Item Name</th>
+                            <th scope="col">Type</th>
+                            <th scope="col">Quantity</th>
+                            <th scope="col">Location</th>
+                            <th scope="col">Expiration</th>
+                            <th scope="col" class="text-end pe-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in FilteredItems)
+                        {
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="fw-bold">@item.ItemName</div>
+                                    @if(!string.IsNullOrEmpty(item.Barcode)) { <div class="small text-muted"><i class="bi bi-upc-scan me-1"></i>@item.Barcode</div> }
+                                </td>
+                                <td><span class="badge bg-light text-dark border">@item.ItemType</span></td>
+                                <td>@item.ItemQuantity</td>
+                                <td>@item.StorageLocation</td>
+                                <td>
+                                    @if(item.ExpirationDate.HasValue)
+                                    {
+                                        <span class="@GetExpirationClass(item.ExpirationDate.Value)">
+                                            @item.ExpirationDate.Value.ToShortDateString()
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td class="text-end pe-4">
+                                    <button class="btn btn-sm btn-outline-secondary me-1" title="Edit" @onclick="() => PrepareEditFoodItem(item)">
+                                        <i class="bi bi-pencil me-1"></i> Edit
+                                    </button>
+                                     <button class="btn btn-sm btn-outline-danger" title="Delete" @onclick="() => DeleteItem(item)">
+                                        <i class="bi bi-trash me-1"></i> Delete
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Add/Edit Item Modal -->
+@if (ShowAddModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+         <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(IsEditing ? "Edit Item" : "Add New Item")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <form @onsubmit="SaveNewItem">
+                        <div class="mb-3">
+                            <label for="itemName" class="form-label">Item Name</label>
+                            <input type="text" class="form-control" id="itemName" @bind="NewItem.ItemName" required placeholder="e.g. Milk, Rice">
+                        </div>
+                        
+                         <div class="row mb-3">
+                            <div class="col">
+                                <label for="quantity" class="form-label">Quantity</label>
+                                <input type="number" class="form-control" id="quantity" @bind="NewItem.ItemQuantity" min="1" required>
+                            </div>
+                            <div class="col">
+                                <label for="itemType" class="form-label">Type</label>
+                                <select class="form-select" id="itemType" @bind="NewItem.ItemType">
+                                    <option value="Pantry">Pantry</option>
+                                    <option value="Fridge">Fridge</option>
+                                    <option value="Freezer">Freezer</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="location" class="form-label">Storage Location</label>
+                            <input type="text" class="form-control" id="location" @bind="NewItem.StorageLocation" placeholder="e.g. Top Shelf, Bin A">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="expiration" class="form-label">Expiration Date</label>
+                            <input type="date" class="form-control" id="expiration" @bind="NewItem.ExpirationDate">
+                        </div>
+                        
+                         <div class="mb-3">
+                             <label for="barcode" class="form-label">Barcode (Optional)</label>
+                             <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-upc-scan"></i></span>
+                                <input type="text" class="form-control" id="barcode" @bind="NewItem.Barcode" placeholder="Scan or type...">
+                             </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="SaveNewItem" disabled="@IsSaving">
+                         @if (IsSaving) { <span class="spinner-border spinner-border-sm me-2"></span> } Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Models.FoodItem> InventoryItems = new();
+    private bool IsLoading = true;
+    private bool IsSaving = false;
+    private string SearchTerm = "";
+    private bool ShowAddModal = false;
+    private bool IsEditing = false;
+    
+    // Check initialized in PrepareAddFoodItem
+    private Models.FoodItem NewItem = new();
+
+    private IEnumerable<Models.FoodItem> FilteredItems => 
+        string.IsNullOrWhiteSpace(SearchTerm) 
+        ? InventoryItems 
+        : InventoryItems.Where(i => i.ItemName.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+    
+    private async Task LoadData()
+    {
+        IsLoading = true;
+        // Fetch data using the service
+        InventoryItems = await DbService.GetInventoryAsync();
+        IsLoading = false;
+    }
+
+    private void PrepareAddFoodItem()
+    {
+        IsEditing = false;
+        NewItem = new Models.FoodItem 
+        { 
+            ItemType = "Pantry", 
+            ItemQuantity = 1,
+            DateAdded = DateTime.UtcNow
+        };
+        ShowAddModal = true;
+    }
+    
+     private void PrepareEditFoodItem(Models.FoodItem item)
+    {
+        IsEditing = true;
+        // Clone the item to avoid editing the list directly before saving
+        NewItem = new Models.FoodItem 
+        { 
+            Id = item.Id,
+            UserId = item.UserId,
+            ItemName = item.ItemName,
+            ItemType = item.ItemType,
+            ItemQuantity = item.ItemQuantity,
+            StorageLocation = item.StorageLocation,
+            ExpirationDate = item.ExpirationDate,
+            Barcode = item.Barcode,
+            DateAdded = item.DateAdded,
+            CreatedAt = item.CreatedAt
+        };
+        ShowAddModal = true;
+    }
+
+    private void CloseModal()
+    {
+        ShowAddModal = false;
+    }
+    
+    private async Task SaveNewItem()
+    {
+        if (string.IsNullOrWhiteSpace(NewItem.ItemName)) return;
+
+        IsSaving = true;
+        bool success = false;
+        
+        // Ensure user ID is set (SupabaseAuth provider has it, but better explicit if RLS needs it)
+        var session = DbService.Client.Auth.CurrentSession;
+        if (session?.User != null && Guid.TryParse(session.User.Id, out var userId))
+        {
+            NewItem.UserId = userId;
+        }
+
+        if (IsEditing)
+        {
+             success = await DbService.UpdateFoodItemAsync(NewItem);
+        }
+        else
+        {
+             success = await DbService.AddFoodItemAsync(NewItem);
+        }
+
+        if (success)
+        {
+            await LoadData(); // Refresh list
+            CloseModal();
+        }
+        
+        IsSaving = false;
+    }
+    
+    private async Task DeleteItem(Models.FoodItem item)
+    {
+        // Simple client-side delete for now (until we confirm UI)
+        // In real app, we would await DbService.DeleteFoodItemAsync(item);
+        // And then reload data
+        if (await DbService.DeleteFoodItemAsync(item))
+        {
+             InventoryItems.Remove(item);
+        }
+    }
+
+    private string GetExpirationClass(DateTime date)
+    {
+        var days = (date - DateTime.Now).TotalDays;
+        if (days < 0) return "text-danger fw-bold"; // Expired
+        if (days < 7) return "text-warning fw-bold"; // Expiring soon
+        return "text-success";
+    }
+}

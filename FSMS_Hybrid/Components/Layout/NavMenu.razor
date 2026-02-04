@@ -1,32 +1,52 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">FSMS_Hybrid</a>
+﻿<div class="list-group list-group-flush">
+    <div class="sidebar-heading border-bottom bg-light p-3 text-center fw-bold">
+        FSMS Hybrid
     </div>
+    
+    <!-- Links visible only when logged in -->
+    <AuthorizeView>
+        <Authorized>
+            <NavLink class="list-group-item list-group-item-action list-group-item-light p-3" href="" Match="NavLinkMatch.All">
+                <i class="bi bi-house-door-fill me-2"></i> Home
+            </NavLink>
+            <NavLink class="list-group-item list-group-item-action list-group-item-light p-3" href="counter">
+                <i class="bi bi-plus-square-fill me-2"></i> Counter
+            </NavLink>
+            <NavLink class="list-group-item list-group-item-action list-group-item-light p-3" href="weather">
+                <i class="bi bi-cloud-sun-fill me-2"></i> Weather
+            </NavLink>
+            
+            <!-- Future Inventory Link -->
+            <!-- <NavLink class="list-group-item list-group-item-action list-group-item-light p-3" href="inventory">
+                <i class="bi bi-box-seam me-2"></i> Inventory
+            </NavLink> -->
+            
+             <NavLink class="list-group-item list-group-item-action list-group-item-light p-3" href="profile">
+                <i class="bi bi-person-circle me-2"></i> My Profile
+            </NavLink>
+            
+            <div class="mt-4 border-top pt-2">
+                 <button class="list-group-item list-group-item-action list-group-item-light p-3 text-danger" @onclick="HandleLogout">
+                    <i class="bi bi-box-arrow-right me-2"></i> Logout
+                </button>
+            </div>
+        </Authorized>
+        <NotAuthorized>
+            <!-- No links for unauthorized users, they are redirected anyway -->
+             <div class="p-3 text-muted small text-center">
+                 Please log in to access menu.
+             </div>
+        </NotAuthorized>
+    </AuthorizeView>
 </div>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+@inject Services.SupabaseService DbService
+@inject NavigationManager Navigation
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="nav flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
-            </NavLink>
-        </div>
-         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="login">
-                <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> Login
-            </NavLink>
-        </div>
-    </nav>
-</div>
+@code {
+    private async Task HandleLogout()
+    {
+        await DbService.LogoutAsync();
+        Navigation.NavigateTo("login", true);
+    }
+}

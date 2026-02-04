@@ -17,8 +17,15 @@ public static class MauiProgram
 
 		builder.Services.AddMauiBlazorWebView();
 
+
 		// Register Supabase Service
 		builder.Services.AddSingleton<Services.SupabaseService>();
+        // Expose the underlying Client for the AuthStateProvider
+        builder.Services.AddSingleton<Supabase.Client>(sp => sp.GetRequiredService<Services.SupabaseService>().Client);
+
+        // Auth
+        builder.Services.AddAuthorizationCore();
+        builder.Services.AddScoped<Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider, Services.SupabaseAuthStateProvider>();
 
 
 #if DEBUG

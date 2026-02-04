@@ -1,17 +1,22 @@
 ﻿@inherits LayoutComponentBase
 
-<div class="page">
-    <div class="sidebar">
+<div class="d-flex" id="wrapper">
+    <!-- Sidebar -->
+    <div class="border-end bg-white" id="sidebar-wrapper" style="width: 250px; min-height: 100vh;">
         <NavMenu />
     </div>
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
+    <!-- Page Content -->
+    <div id="page-content-wrapper" class="w-100">
+        <!-- Top Nav (Optional, mostly for mobile toggle if needed later) -->
+        <nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom px-3">
+             <div class="container-fluid">
+                 <span class="navbar-brand">FSMS Dashboard</span>
+             </div>
+        </nav>
 
-        <article class="content px-4">
+        <div class="container-fluid p-4">
             @Body
-        </article>
-    </main>
+        </div>
+    </div>
 </div>

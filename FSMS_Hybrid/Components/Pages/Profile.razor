@@ -1,0 +1,82 @@
+@page "/profile"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject Services.SupabaseService DbService
+
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <h3 class="mb-4 fw-bold">My Profile</h3>
+
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center mb-4">
+                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 64px; height: 64px; font-size: 24px;">
+                        @Initials
+                    </div>
+                    <div>
+                        <h5 class="mb-0 fw-bold">@FullName</h5>
+                        <p class="text-muted mb-0">@Email</p>
+                    </div>
+                </div>
+
+                <hr class="text-muted opacity-25" />
+
+                <div class="mb-3">
+                    <label class="form-label text-muted small text-uppercase fw-bold">Email Address</label>
+                    <div class="form-control-plaintext text-dark">@Email</div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted small text-uppercase fw-bold">First Name</label>
+                        <div class="form-control-plaintext text-dark">@FirstName</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted small text-uppercase fw-bold">Last Name</label>
+                        <div class="form-control-plaintext text-dark">@LastName</div>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <div class="alert alert-info border-0 bg-light d-flex align-items-start">
+                        <i class="bi bi-info-circle-fill text-primary me-2 mt-1"></i>
+                        <div>
+                            <small>Account details are managed via Supabase Auth. To update your password or email, please use the account recovery flow.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string Email = "";
+    private string FirstName = "User";
+    private string LastName = "";
+    
+    private string FullName => $"{FirstName} {LastName}".Trim();
+    private string Initials => string.IsNullOrWhiteSpace(FullName) ? "?" : string.Join("", FullName.Split(' ').Take(2).Select(s => s[0])).ToUpper();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var session = DbService.Client.Auth.CurrentSession;
+        if (session != null && session.User != null)
+        {
+            Email = session.User.Email;
+            
+            // Retrieve metadata safely
+            if (session.User.UserMetadata != null)
+            {
+                if (session.User.UserMetadata.TryGetValue("first_name", out var fn))
+                {
+                    FirstName = fn?.ToString() ?? "";
+                }
+                 if (session.User.UserMetadata.TryGetValue("last_name", out var ln))
+                {
+                    LastName = ln?.ToString() ?? "";
+                }
+            }
+        }
+    }
+}

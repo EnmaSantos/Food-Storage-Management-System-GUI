@@ -1,0 +1,14 @@
+@inherits LayoutComponentBase
+
+<div class="auth-layout-container bg-light min-vh-100 d-flex align-items-center justify-content-center">
+    @Body
+</div>
+
+<style>
+    /* Ensure the layout takes full height and width, overriding any default margins */
+    .auth-layout-container {
+        width: 100vw;
+        height: 100vh;
+        overflow-y: auto; /* Allow scrolling if content is too tall */
+    }
+</style>
